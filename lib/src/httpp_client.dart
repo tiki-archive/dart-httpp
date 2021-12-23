@@ -6,12 +6,11 @@
 import 'dart:collection';
 
 import 'package:http/http.dart';
-import 'package:httpp/src/httpp_manager.dart';
 import 'package:logging/logging.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../httpp.dart';
+import 'httpp_manager.dart';
 import 'httpp_request.dart';
 import 'httpp_response.dart';
 import 'httpp_utils.dart';
@@ -23,14 +22,18 @@ class HttppClient {
   final HttppManager _manager;
   final void Function()? _onFinished;
   ListQueue<HttppRequest> _queue = ListQueue<HttppRequest>();
-  SentryHttpClient? _client;
+  Client Function() _useClient;
+  Client? _client;
 
   int _pending = 0;
 
-  HttppClient({required HttppManager manager, void Function()? onFinished})
+  HttppClient(
+      {required HttppManager manager,
+      void Function()? onFinished,
+      Client Function()? useClient})
       : this._manager = manager,
-        this._onFinished = onFinished;
-
+        this._onFinished = onFinished,
+        this._useClient = useClient ?? (() => Client());
   String get id => _id;
 
   Future<void> request(HttppRequest request) {
@@ -41,7 +44,7 @@ class HttppClient {
 
   void _open() {
     _log.finest('Opening client for ${id}');
-    _client = SentryHttpClient();
+    _client = _useClient();
   }
 
   Future<void> send() async {

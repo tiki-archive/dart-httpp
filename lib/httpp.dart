@@ -3,6 +3,8 @@
  * MIT license. See LICENSE file in root directory.
  */
 
+import 'package:http/http.dart';
+
 import 'src/httpp_client.dart';
 import 'src/httpp_manager.dart';
 
@@ -15,8 +17,13 @@ export 'src/httpp_utils.dart';
 export 'src/httpp_verb.dart';
 
 class Httpp {
-  HttppManager _manager = HttppManager();
+  final Client Function()? _useClient;
+  final HttppManager _manager;
 
-  HttppClient client({void Function()? onFinished}) =>
-      HttppClient(manager: _manager, onFinished: onFinished);
+  Httpp({Client Function()? useClient, int? requestLimit})
+      : this._useClient = useClient,
+        this._manager = HttppManager(requestLimit: requestLimit);
+
+  HttppClient client({void Function()? onFinished}) => HttppClient(
+      manager: _manager, onFinished: onFinished, useClient: _useClient);
 }

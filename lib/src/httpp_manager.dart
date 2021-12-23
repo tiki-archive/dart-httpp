@@ -13,8 +13,10 @@ class HttppManager {
   Logger _log = Logger("HttppManager");
 
   ListQueue<HttppClient> _queue = ListQueue<HttppClient>();
-  static const int _requestLimit = 100;
+  final int _requestLimit;
   int _activeRequests = 0;
+
+  HttppManager({int? requestLimit}) : this._requestLimit = requestLimit ?? 100;
 
   Future<void> add(HttppClient client) {
     _queue.add(client);
