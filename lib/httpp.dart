@@ -7,6 +7,7 @@ import 'package:http/http.dart';
 
 import 'src/httpp_client.dart';
 import 'src/httpp_manager.dart';
+import 'src/httpp_response.dart';
 
 export 'src/httpp_body.dart';
 export 'src/httpp_client.dart';
@@ -24,6 +25,15 @@ class Httpp {
       : this._useClient = useClient,
         this._manager = HttppManager(requestLimit: requestLimit);
 
-  HttppClient client({void Function()? onFinished}) => HttppClient(
-      manager: _manager, onFinished: onFinished, useClient: _useClient);
+  HttppClient client({
+    void Function()? onFinish,
+    Duration Function(HttppResponse)? tooManyReqDelay,
+    Future<String> Function(HttppResponse)? refreshAuth,
+  }) =>
+      HttppClient(
+          manager: _manager,
+          onFinish: onFinish,
+          useClient: _useClient,
+          tooManyReqDelay: tooManyReqDelay,
+          refreshAuth: refreshAuth);
 }

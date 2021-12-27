@@ -27,9 +27,9 @@ class HttppManager {
   Future<void> _process() async {
     if (_queue.length > 0 && _activeRequests < _requestLimit) {
       _activeRequests++;
-      _log.info('Active Requests: ${_activeRequests}/${_requestLimit}');
+      _log.fine('Active Requests: ${_activeRequests}/${_requestLimit}');
       HttppClient client = _queue.removeFirst();
-      _log.finest('Processing request for client ${client.id}');
+      _log.fine('Processing request for client ${client.id}');
       await client.send();
     }
   }
@@ -40,7 +40,7 @@ class HttppManager {
       _log.severe('Negative active requests!? Resetting to 0');
       _activeRequests = 0;
     }
-    _log.info('Active Requests: ${_activeRequests}/${_requestLimit}');
+    _log.fine('Active Requests: ${_activeRequests}/${_requestLimit}');
     await _process();
   }
 }

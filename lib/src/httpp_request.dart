@@ -15,7 +15,7 @@ class HttppRequest {
   final String _id = Uuid().v4();
   final HttppVerb _verb;
   final Uri _uri;
-  final int? _timeout;
+  final Duration? _timeout;
 
   HttppHeaders? headers;
   HttppBody? body;
@@ -36,8 +36,7 @@ class HttppRequest {
 
   Uri get uri => _uri;
 
-  Duration? get timeout =>
-      _timeout != null ? Duration(milliseconds: _timeout!) : null;
+  Duration? get timeout => _timeout;
 
   HttppRequest(
       {required HttppVerb verb,
@@ -47,10 +46,10 @@ class HttppRequest {
       this.onSuccess,
       this.onResult,
       this.onError,
-      int? timeoutMS})
+      Duration? timeout})
       : this._verb = verb,
         this._uri = uri,
-        this._timeout = timeoutMS;
+        this._timeout = timeout;
 
   Request toRequest() {
     Request request = Request(_verb.value!, _uri);

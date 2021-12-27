@@ -29,23 +29,22 @@ void main() {
   test('100 simultaneous http requests', () async {
     int resultCount = 0;
     bool complete = false;
-    final HttppClient client = Httpp(requestLimit: 100).client(onFinished: () {
+    final HttppClient client = Httpp(requestLimit: 100).client(onFinish: () {
       expect(resultCount, 100);
       complete = true;
     });
-
-    List<Future> requests = [];
+    List<HttppRequest> requests = [];
     for (int i = 0; i < 100; i++) {
-      HttppRequest request = HttppRequest(
+      requests.add(HttppRequest(
           uri: Uri.parse("https://google.com"),
           verb: HttppVerb.GET,
           onResult: (response) {
             resultCount++;
             expect(response is HttppResponse, true);
             expect(response.statusCode, 200);
-          });
-      requests.add(client.request(request));
+          }));
     }
+    client.requests(requests);
     await HttppTestHelpers.poll(() => complete);
   });
 
@@ -54,23 +53,22 @@ void main() {
     bool complete = false;
     final HttppClient client =
         Httpp(requestLimit: 100, useClient: () => Client()).client(
-            onFinished: () {
+            onFinish: () {
       expect(resultCount, 300);
       complete = true;
     });
-
-    List<Future> requests = [];
+    List<HttppRequest> requests = [];
     for (int i = 0; i < 300; i++) {
-      HttppRequest request = HttppRequest(
+      requests.add(HttppRequest(
           uri: Uri.parse("https://google.com"),
           verb: HttppVerb.GET,
           onResult: (response) {
             resultCount++;
             expect(response is HttppResponse, true);
             expect(response.statusCode, 200);
-          });
-      requests.add(client.request(request));
+          }));
     }
+    client.requests(requests);
     await HttppTestHelpers.poll(() => complete);
   });
 
@@ -79,22 +77,21 @@ void main() {
     bool complete = false;
     final HttppClient client =
         Httpp(requestLimit: 100, useClient: () => Client()).client(
-            onFinished: () {
+            onFinish: () {
       expect(resultCount, 199);
       complete = true;
     });
 
-    List<Future> requests = [];
+    List<HttppRequest> requests = [];
     for (int i = 0; i < 199; i++) {
-      HttppRequest request = HttppRequest(
+      requests.add(HttppRequest(
           uri: Uri.parse("https://google.com"),
           verb: HttppVerb.GET,
           onResult: (response) {
             resultCount++;
             expect(response is HttppResponse, true);
             expect(response.statusCode, 200);
-          });
-      requests.add(client.request(request));
+          }));
     }
     HttppRequest request = HttppRequest(
         uri: Uri.parse("https://google.com"),
@@ -104,8 +101,29 @@ void main() {
           expect(response is HttppResponse, true);
           expect(response.statusCode, 200);
         });
-    requests.add(client.request(request));
+    requests.add(request);
+    client.requests(requests);
     request.cancel();
+    await HttppTestHelpers.poll(() => complete);
+  });
+
+  test('http close', () async {
+    bool complete = false;
+    final HttppClient client = Httpp().client();
+    client.request(HttppRequest(
+        uri: Uri.parse("https://google.com"),
+        verb: HttppVerb.GET,
+        onSuccess: (response) {
+          expect(response is HttppResponse, true);
+          expect(response.statusCode, 200);
+        }));
+    await Future.delayed(Duration(seconds: 6));
+    client.request(HttppRequest(
+        uri: Uri.parse("https://google.com"),
+        verb: HttppVerb.GET,
+        onResult: (response) {
+          complete = true;
+        }));
     await HttppTestHelpers.poll(() => complete);
   });
 }
