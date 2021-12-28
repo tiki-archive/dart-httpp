@@ -115,13 +115,13 @@ class HttppClient {
     return _reschedule(request);
   }
 
-  Future<void> denyUntil(HttppRequest request, Future task) {
+  Future<void> denyUntil(HttppRequest request, Future Function() task) {
     String? host = request.uri.host;
     if (!_denySet.contains(host)) {
       _log.finest(
           "Adding $host to denylist until task ${task.hashCode} completes");
       _denySet.add(host);
-      task.then((_) => _allow(host));
+      task().then((_) => _allow(host));
     }
     return _reschedule(request);
   }
