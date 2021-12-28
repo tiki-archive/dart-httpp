@@ -30,10 +30,5 @@ class Httpp {
     Duration Function(HttppResponse)? tooManyReqDelay,
     Future<String> Function(HttppResponse)? refreshAuth,
   }) =>
-      HttppClient(
-          manager: _manager,
-          onFinish: onFinish,
-          useClient: _useClient,
-          tooManyReqDelay: tooManyReqDelay,
-          refreshAuth: refreshAuth);
+      HttppClient(manager: _manager, onFinish: onFinish, useClient: _useClient);
 }
