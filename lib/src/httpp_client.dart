@@ -19,7 +19,7 @@ import 'httpp_utils.dart';
 class HttppClient {
   final Logger _log = Logger("HttppClient");
   static const Duration _rescheduleDelay = Duration(milliseconds: 100);
-  static const Duration _closeDelay = Duration(seconds: 5);
+  static const Duration _closeDelay = Duration(seconds: 1);
 
   final String _id = Uuid().v4();
   final HttppManager _manager;
