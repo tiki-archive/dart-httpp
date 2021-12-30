@@ -19,14 +19,12 @@ import 'httpp_utils.dart';
 class HttppClient {
   final Logger _log = Logger("HttppClient");
   static const Duration _rescheduleDelay = Duration(milliseconds: 100);
-  static const Duration _closeDelay = Duration(seconds: 5);
+  static const Duration _closeDelay = Duration(seconds: 1);
 
   final String _id = Uuid().v4();
   final HttppManager _manager;
   final void Function()? _onFinish;
   final Client Function() _useClient;
-  final Duration Function(HttppResponse)? _tooManyReqDelay;
-  final Future<String> Function(HttppResponse)? _refreshAuth;
 
   ListQueue<HttppRequest> _queue = ListQueue<HttppRequest>();
   Client? _client;
@@ -39,14 +37,12 @@ class HttppClient {
   HttppClient(
       {required HttppManager manager,
       void Function()? onFinish,
-      Duration Function(HttppResponse)? tooManyReqDelay,
-      Future<String> Function(HttppResponse)? refreshAuth,
+      Duration Function(HttppResponse)? handleRateLimit,
+      Future<String> Function(HttppResponse)? handleTokenRefresh,
       Client Function()? useClient})
       : this._manager = manager,
         this._onFinish = onFinish,
-        this._useClient = useClient ?? (() => Client()),
-        this._refreshAuth = refreshAuth,
-        this._tooManyReqDelay = tooManyReqDelay;
+        this._useClient = useClient ?? (() => Client());
 
   String get id => _id;
 
@@ -66,14 +62,6 @@ class HttppClient {
     List<Future> futures = [];
     for (HttppRequest request in requests) futures.add(_manager.add(this));
     return Future.wait(futures);
-  }
-
-  void _open() {
-    if (_client == null || _closed == true) {
-      _log.finest('Opening client for ${id}');
-      _client = _useClient();
-      _closed = false;
-    }
   }
 
   Future<void> send() async {
@@ -100,14 +88,7 @@ class HttppClient {
             'Received response from ${request.verb.value} ${request.uri}');
 
         _pending--;
-        if (_tooManyReqDelay != null &&
-            HttppUtils.isTooManyRequests(response.statusCode))
-          _handleTooManyRequests(response);
-        else if (_refreshAuth != null &&
-            HttppUtils.isUnauthorized(response.statusCode))
-          _handleUnauthorized(response);
-        else if (HttppUtils.is2xx(response.statusCode) &&
-            request.onSuccess != null)
+        if (HttppUtils.is2xx(response.statusCode) && request.onSuccess != null)
           request.onSuccess!(response);
         else if (request.onResult != null) request.onResult!(response);
       }
@@ -124,20 +105,32 @@ class HttppClient {
     }
   }
 
-  Future<void> _reschedule(HttppRequest request) async {
-    _log.fine('Request ${request.id} will be rescheduled');
-    _rescheduling++;
-    return Future.delayed(_rescheduleDelay, () {
-      _log.fine('Request ${request.id} rescheduled');
-      this.request(request);
-      _rescheduling--;
-    });
+  Future<void> denyFor(HttppRequest request, Duration duration) {
+    String? host = request.uri.host;
+    if (!_denySet.contains(host)) {
+      _log.finest("Adding $host to denylist for $duration");
+      _denySet.add(host);
+      Future.delayed(duration, () => _allow(host));
+    }
+    return _reschedule(request);
   }
 
-  void _cancelClose() {
-    if (_closing?.isActive == true) {
-      _closing?.cancel();
-      _log.finest('Cancelling close client ${id}');
+  Future<void> denyUntil(HttppRequest request, Future Function() task) {
+    String? host = request.uri.host;
+    if (!_denySet.contains(host)) {
+      _log.finest(
+          "Adding $host to denylist until task ${task.hashCode} completes");
+      _denySet.add(host);
+      task().then((_) => _allow(host));
+    }
+    return _reschedule(request);
+  }
+
+  void _open() {
+    if (_client == null || _closed == true) {
+      _log.finest('Opening client for ${id}');
+      _client = _useClient();
+      _closed = false;
     }
   }
 
@@ -152,37 +145,25 @@ class HttppClient {
     }
   }
 
-  void _handleTooManyRequests(HttppResponse response) {
-    String? host = response.request?.uri.host;
-    if (host != null && !_denySet.contains(host)) {
-      _log.finest("Too Many Requests — Adding $host to denylist");
-      _denySet.add(host);
-      Future.delayed(_tooManyReqDelay!(response), () => _allow(host));
+  void _cancelClose() {
+    if (_closing?.isActive == true) {
+      _closing?.cancel();
+      _log.finest('Cancelling close client ${id}');
     }
-    _reschedule(response.request!);
   }
 
-  void _handleUnauthorized(HttppResponse response) {
-    String? host = response.request?.uri.host;
-    if (host != null && !_denySet.contains(host)) {
-      _log.finest("Unauthorized — Adding $host to denylist");
-      _denySet.add(host);
-      _refreshAuth!(response)
-          .timeout(Duration(seconds: 90))
-          .onError((error, stackTrace) {
-        _allow(host);
-        throw error ??
-            'Refresh token error — ${response.request?.verb.value} ${response.request?.uri}';
-      }).then((token) {
-        response.request?.headers?.auth(token);
-        _allow(host);
-      });
-    }
-    _reschedule(response.request!);
+  Future<void> _reschedule(HttppRequest request) async {
+    _log.fine('Request ${request.id} will be rescheduled');
+    _rescheduling++;
+    return Future.delayed(_rescheduleDelay, () {
+      _log.fine('Request ${request.id} rescheduled');
+      this.request(request);
+      _rescheduling--;
+    });
   }
 
-  void _allow(String host) {
-    if (_denySet.contains(host)) {
+  void _allow(String? host) {
+    if (host != null && _denySet.contains(host)) {
       _log.finest("Removing $host from denylist");
       _denySet.remove(host);
     }
