@@ -15,11 +15,10 @@ class HttppHeaders {
       : _headers = provided != null ? provided : Map();
 
   HttppHeaders.typical({String? bearerToken}) : _headers = Map() {
-    this
-        .auth(bearerToken)
-        .accept("*/*")
-        .contentType("application/json")
-        .cacheControl("no-cache");
+    accept("*/*");
+    contentType("application/json");
+    cacheControl("no-cache");
+    if (bearerToken != null) auth(bearerToken);
   }
 
   Map<String, String> get map => _headers;
