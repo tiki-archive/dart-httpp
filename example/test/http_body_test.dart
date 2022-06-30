@@ -8,7 +8,7 @@ void main() {
     Logger.root.onRecord.listen((event) => messages.add(event));
     HttppBody body = HttppBody('<!DOCTYPE html><html lang="en"><head>"');
     Map<String, dynamic>? jsonBody = body.jsonBody;
-    expect(jsonBody, null);
+    expect(jsonBody, {});
     expect(messages.length, 1);
     expect(messages[0].message, 'Bad JSON format: Unexpected character');
     expect(messages[0].error, '<!DOCTYPE html><html lang="en"><head>"');

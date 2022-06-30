@@ -17,15 +17,15 @@ class HttppBody {
 
   String get body => _body ?? '';
 
-  Map<String, dynamic>? get jsonBody {
+  Map<String, dynamic> get jsonBody {
     try {
       return jsonDecode(_body ?? '');
     } on FormatException catch (e) {
       _log.severe("Bad JSON format: ${e.message}", _body);
-      return null;
+      return {};
     }catch(e){
       _log.severe(e.toString(), _body);
-      return null;
+      return {};
     }
   }
 }
