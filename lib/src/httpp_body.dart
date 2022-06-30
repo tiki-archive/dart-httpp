@@ -5,7 +5,10 @@
 
 import 'dart:convert';
 
+import 'package:logging/logging.dart';
+
 class HttppBody {
+  Logger _log = Logger("HttpBody");
   final String? _body;
 
   HttppBody(this._body);
@@ -14,5 +17,15 @@ class HttppBody {
 
   String get body => _body ?? '';
 
-  Map<String, dynamic> get jsonBody => jsonDecode(_body ?? '');
+  Map<String, dynamic>? get jsonBody {
+    try {
+      return jsonDecode(_body ?? '');
+    } on FormatException catch (e) {
+      _log.severe("Bad JSON format: ${e.message}", _body);
+      return null;
+    }catch(e){
+      _log.severe(e.toString(), _body);
+      return null;
+    }
+  }
 }
