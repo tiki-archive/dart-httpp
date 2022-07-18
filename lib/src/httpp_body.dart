@@ -17,7 +17,7 @@ class HttppBody {
 
   String get body => _body ?? '';
 
-  Map<String, dynamic> get jsonBody {
+  dynamic get jsonBody {
     try {
       return jsonDecode(_body ?? '');
     } on FormatException catch (e) {
